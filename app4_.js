@@ -3,38 +3,38 @@ var http = require(`http`);
 var static = require(`serve-static`);
 var path = require(`path`);
 
-var bodyParser = require(`body-parser`);
+var bodyParser = require('body-parser');
 var cookieParser = require(`cookie-parser`);
 var expressSession = require(`express-session`);
 
 //에러 핸들러 모듈 사용
 var expressErrorHandler = require(`express-error-handler`);
 
-//mongoose모듈 사용
-var mongoose =require(`mongoose`);
+//mongoose 모듈 사용
+var mongoose = require(`mongoose`);
 
 var database;
-var userSchema;
-var userModel;
+var UserSchema;
+var UserModel;
 
 function connectDB() {
     var databaseUrl = `mongodb://localhost:27017/local`;
 
-    mongoose.Promise = global.Promise; //몽구스에서 설정을 이렇게 해달라고 정해놓음
-    mongoose.connect(databaseUrl, {useNewUrlParser : true}); //새로운 몽구스 연결 방식 {useNewUrlParser : true} 추가로 던져야함
+    mongoose.Promise = global.Promise; //몽구스에서 설정을 이렇게 하라고 정해 놓음
+    mongoose.connect(databaseUrl, {useNewUrlParser:true}); //몽고수 새로운 연결방식
     database = mongoose.connection;
-    database.on('open', () => { //open이라는 이벤트가 발생 했을때 연결
-        console.log(`database connected by mongoose : ${databaseUrl}`);
+    database.on('open', () => { //open 이라는 이벤트가 발생하면 연걸
+        console.log(`database connected by moogse : ${databaseUrl}`);
 
-        userSchema = mongoose.Schema({
+        UserSchema = mongoose.Schema({
             id: String,
             name: String,
             password: String
         });
-        console.log(`userSchema 정의함.`);
+        console.log(`UserSchema 정의완료`);
 
-        userModel = mongoose.model(`users`, userSchema);
-        console.log(`userModel 정의함.`);
+        UserModel = mongoose.model(`users`, UserSchema);
+        console.log(`UserModel 정의`);
     });
 
     database.on(`disconnected`, () => {
@@ -42,22 +42,22 @@ function connectDB() {
     });
 
     database.on(`error`, console.error.bind(console, `mongoose 연결 에러`));
-
-    
 }
 
 var app = express();
-app.set(`port`, process.env.PORT || 3000); 
-app.use(`/public`, static(path.join(__dirname, 'public')));
+app.set(`port`, process.env.PORT || 3000);
+console.log(`port 번호 설정완료`);
+app.use(`/public`, static(path.join(__dirname,'public')));
+console.log(`dir 설정 완료`);
 
 app.use(bodyParser.urlencoded({extended:false}));
 app.use(bodyParser.json());
 
 app.use(cookieParser());
 app.use(expressSession({
-    secret:'my key',
-    resave:true,
-    saveUninitialized:true
+    secret: `my key`,
+    resave: true,
+    saveUninitialized: true
 }));
 
 var router = express.Router();
@@ -65,11 +65,11 @@ var router = express.Router();
 app.use(`/`, router);
 
 router.route(`/login`).post((req, res) => {
-    console.log(`/login 요청 들어옴`);
+    console.log(`/login called`);
 
     var paramId = req.body.id;
     var paramPassword = req.body.password;
-    console.log(`요청 파라미터 2개 : ${paramId}, ${paramPassword}`);
+    console.log(`two parameters : ${paramId}, ${paramPassword}`);
 
     if(database) {
         authUser(database, paramId, paramPassword, (err, docs) => {
@@ -96,7 +96,6 @@ router.route(`/login`).post((req, res) => {
                 res.end();
             }
         });
-
     }else {
         console.log(`database doc 연결 안됨`);
         res.writeHead(200, {"Content-Type":"text/html;charset=utf8"});
@@ -107,16 +106,16 @@ router.route(`/login`).post((req, res) => {
 
 
 router.route(`/addUser`).post((req, res) => {
-    console.log(`addUser routing fn calle`);
+    console.log(`addUser routing fn called`);
 
     var paramId = req.body.id;
-    var paramPasswrod = req.body.password;
+    var paramPassword = req.body.password;
     var paramName = req.body.name;
 
-    console.log(`addUser 요청 파라미터 : ${paramId}, ${paramPasswrod}, ${paramName}`);
+    console.log(`parameters : ${paramId}, ${paramPassword}, ${paramName}`);
 
     if(database) {
-        addUser(database, paramId, paramPasswrod, paramName, (err, result) => {
+        addUser(database, paramId, paramPassword, paramName, (err, results) => {
             if(err) {
                 console.log(`error 발생`);
                 res.writeHead(200, {"Content-Type":"text/html;charset=utf8"});
@@ -125,7 +124,7 @@ router.route(`/addUser`).post((req, res) => {
                 return;
             }
 
-            if(result) {
+            if(results) {
                 console.dir(result);
                 res.writeHead(200, {"Content-Type":"text/html;charset=utf8"});
                 res.write(`<h1>사용자 추가 성공</h1>`);
@@ -147,54 +146,50 @@ router.route(`/addUser`).post((req, res) => {
     }
 });
 
-
 var authUser = (db, id, password, callback) => {
-    console.log(`authUser called : ${id}, ${password}`);
+    console.log(`addUser called : ${id}, ${password}`);
 
-    userModel.find({"id":id, "password":password}, (err, docs) => {
+    UserModel.find({"id":id, "password":password}, (err, docs) => {
         if(err) {
             callback(err, null);
             return;
         }
 
         if(docs.length > 0) {
-            console.log("일치 하는 사용자 있음");
+            console.log(`found the user`);
             callback(null, docs);
         }else {
-            console.log("일치하는 자료 없음");
+            console.log(`can not find the user`);
             callback(null, null);
         }
     });
-
 };
 
 var addUser = (db, id, password, name, callback) => {
     console.log(`addUser called : ${id}, ${password}, ${name}`);
 
-    var user = new userModel({"id":id, "password":password, "name":name}); //객체 생성 방식
+    var user = new UserModel({"id":id, "password":password, "name":name}); //객체 생성방식
     user.save((err) => {
         if(err) {
             callback(err, null);
             return;
         }
-        console.log("사용자 데이터 추가함");
+        console.log(`added new user data`);
         callback(null, user);
     });
 };
 
-
 var errorHandler = expressErrorHandler({
-    static : {
-        '404' : './public/404.html'
+    static: {
+        '404': './public/404.html'
     }
 });
 
 app.use(expressErrorHandler.httpError(404));
 app.use(errorHandler);
 
-var server = http.createServer(app).listen(app.get(`port`), () => {
-    console.log(`starts server with exrpess : ${app.get(`port`)}`);
+var server = http.createServer(app).listen(app.get(`prot`), () => {
+    console.log(`starts server with express : ${app.get(`port`)}`);
 
     connectDB();
-})
-
+});
