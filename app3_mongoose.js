@@ -4,7 +4,7 @@ var static = require(`serve-static`);
 var path = require(`path`);
 
 var bodyParser = require(`body-parser`);
-var cookeParser = require(`cooke-parser`);
+var cookeParser = require(`cookie-parser`);
 var expressSession = require(`express-session`);
 
 //에러 핸들러 모듈 사용
@@ -17,11 +17,12 @@ var database;
 var userSchema;
 var userModel;
 
+function connectDB() {
     var databaseUrl = `mongodb://localhost:27017/local`;
 
     mongoose.Promise = global.Promise; //몽구스에서 설정을 이렇게 해달라고 정해놓음
-    mongoose.connect(databaseUrl);
-    database = monggose.connection;
+    mongoose.connect(databaseUrl, {useNewUrlParser : true}); //새로운 몽구스 연결 방식 {useNewUrlParser : true} 추가로 던져야함
+    database = mongoose.connection;
     database.on('open', () => { //open이라는 이벤트가 발생 했을때 연결
         console.log(`database connected by mongoose : ${databaseUrl}`);
 
@@ -32,7 +33,7 @@ var userModel;
         });
         console.log(`userSchema 정의함.`);
 
-        userModel = mongoose.model(`users`, UserSchema);
+        userModel = mongoose.model(`users`, userSchema);
         console.log(`userModel 정의함.`);
     });
 
@@ -49,7 +50,7 @@ var app = express();
 app.set(`port`, process.env.PORT || 3000); 
 app.use(`/public`, static(path.join(__dirname, 'public')));
 
-app.use(bodyParaser.urlencoded({extended:false}));
+app.use(bodyParser.urlencoded({extended:false}));
 app.use(bodyParser.json());
 
 app.use(cookeParser());
@@ -61,9 +62,9 @@ app.use(expressSession({
 
 var router = express.Router();
 
-app.use(`./`, router);
+app.use(`/`, router);
 
-reouter.route(`/login`).post((req, res) => {
+router.route(`/login`).post((req, res) => {
     console.log(`/login 요청 들어옴`);
 
     var paramId = req.body.id;
@@ -80,7 +81,7 @@ reouter.route(`/login`).post((req, res) => {
                 return;
             }
 
-            if(dcos) {
+            if(docs) {
                 console.dir(docs);
                 res.writeHead(200, {"Content-Type":"text/html;charset=utf8"});
                 res.write(`<h1>사용자 로그인 성공</h1>`);
@@ -112,7 +113,7 @@ router.route(`/addUser`).post((req, res) => {
     var paramPasswrod = req.body.password;
     var paramName = req.body.name;
 
-    console.log(`addUser 요청 파라미터 : ${paramId}, ${paramPasswrod}. ${paramName}`);
+    console.log(`addUser 요청 파라미터 : ${paramId}, ${paramPasswrod}, ${paramName}`);
 
     if(database) {
         addUser(database, paramId, paramPasswrod, paramName, (err, result) => {
@@ -128,7 +129,7 @@ router.route(`/addUser`).post((req, res) => {
                 console.dir(result);
                 res.writeHead(200, {"Content-Type":"text/html;charset=utf8"});
                 res.write(`<h1>사용자 추가 성공</h1>`);
-                res.write(`<div><p>사용자 : paramName</p></div>`);
+                res.write(`<div><p>사용자 : ${paramName}</p></div>`);
                 res.end();
                 return;
             }else {
@@ -150,40 +151,34 @@ router.route(`/addUser`).post((req, res) => {
 var authUser = (db, id, password, callback) => {
     console.log(`authUser called : ${id}, ${password}`);
 
-    var users = db.collection(`users`);
-
-    users.find({"id":id, "password":password}).toArray((err, docs) => {
+    userModel.find({"id":id, "password":password}, (err, docs) => {
         if(err) {
             callback(err, null);
             return;
         }
 
-        if(docs.lenght>0) {
+        if(docs.length > 0) {
             console.log("일치 하는 사용자 있음");
-            cabllback(null, docs);
+            callback(null, docs);
         }else {
             console.log("일치하는 자료 없음");
             callback(null, null);
         }
     });
+
 };
 
 var addUser = (db, id, password, name, callback) => {
     console.log(`addUser called : ${id}, ${password}, ${name}`);
 
-    var users = db.collection(`users`);
-    users.insertMany([{"id":id, "password":password, "name":name}], (err, result) => {
+    var user = new userModel({"id":id, "password":password, "name":name}); //객체 생성 방식
+    user.save((err) => {
         if(err) {
             callback(err, null);
             return;
         }
-
-        if(result.insertCount > 0) {
-            console.log(`사용자 추가 완료 : ${result.insertedCount}`);
-        }else {
-            console.log(`추가 된 문서 객체 없음`);
-            callback(null, null);
-        }
+        console.log("사용자 데이터 추가함");
+        callback(null, user);
     });
 };
 
