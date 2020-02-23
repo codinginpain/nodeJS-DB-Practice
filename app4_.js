@@ -46,9 +46,7 @@ function connectDB() {
 
 var app = express();
 app.set(`port`, process.env.PORT || 3000);
-console.log(`port 번호 설정완료`);
 app.use(`/public`, static(path.join(__dirname,'public')));
-console.log(`dir 설정 완료`);
 
 app.use(bodyParser.urlencoded({extended:false}));
 app.use(bodyParser.json());
@@ -188,7 +186,7 @@ var errorHandler = expressErrorHandler({
 app.use(expressErrorHandler.httpError(404));
 app.use(errorHandler);
 
-var server = http.createServer(app).listen(app.get(`prot`), () => {
+var server = http.createServer(app).listen(app.get(`port`), () => {
     console.log(`starts server with express : ${app.get(`port`)}`);
 
     connectDB();
