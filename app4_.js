@@ -27,13 +27,28 @@ function connectDB() {
         console.log(`database connected by moogse : ${databaseUrl}`);
 
         UserSchema = mongoose.Schema({
-            id: String,
-            name: String,
-            password: String
+            id: {type:String, required:true, unique:true},
+            password: {type:String, require:true},
+            name: {type:String, index:'hashed'}, //hased 방식으로 index를 만든다
+            age: {type:Number, 'default':-1},
+            create_at: {type:Date, index:{unique:false}, 'default':Date.now()},
+            update_at: {type:Date, index:{unique:false}, 'default': Date.now()}
         });
         console.log(`UserSchema 정의완료`);
 
-        UserModel = mongoose.model(`users`, UserSchema);
+        UserSchema.static('findById', (id, callback) => {
+            console.log(` 1 : ${this}`);
+            return UserModel.find({id:id}, callback); //this ri UserModel 을 참조하는 것일듯?
+        });
+
+        UserSchema.statics.findById = (id, callback) => { console.log(this); return UserModel.find({}, callback);} // 이렇게 하면 바로 위 함수랑 같음
+
+        UserSchema.static('findAll', (callback) => {
+            console.log(` 3 : ${this}`);
+            return UserModel.find({}, callback);
+        });
+
+        UserModel = mongoose.model(`users2`, UserSchema); //여기서 모델이 만들어짐 (위에 shcema에서 함수나 스키마들을 정의하고 model 에서 사용 할수 있게 만들어짐)
         console.log(`UserModel 정의`);
     });
 
@@ -47,7 +62,7 @@ function connectDB() {
 var app = express();
 app.set(`port`, process.env.PORT || 3000);
 console.log(`port 번호 설정완료`);
-app.use(`/public`, static(path.join(__dirname,'public')));
+app.use(static(path.join(__dirname,'public'))); // app.use(`/public`,static(path.join(__dirname,'public'))); 
 console.log(`dir 설정 완료`);
 
 app.use(bodyParser.urlencoded({extended:false}));
@@ -61,6 +76,8 @@ app.use(expressSession({
 }));
 
 var router = express.Router();
+
+
 
 app.use(`/`, router);
 
@@ -125,7 +142,7 @@ router.route(`/addUser`).post((req, res) => {
             }
 
             if(results) {
-                console.dir(result);
+                console.dir(results);
                 res.writeHead(200, {"Content-Type":"text/html;charset=utf8"});
                 res.write(`<h1>사용자 추가 성공</h1>`);
                 res.write(`<div><p>사용자 : ${paramName}</p></div>`);
@@ -146,8 +163,75 @@ router.route(`/addUser`).post((req, res) => {
     }
 });
 
+
+router.route("/listuser").post((req, res) => {
+    console.log(`/listuser 라우팅 함수 호출 됨.`);
+
+    if(database) {
+        UserModel.findAll((err, results) => {
+            if(err) {
+                console.log(`error 발생`);
+                res.writeHead(200, {"Content-Type":"text/html;charset=utf8"});
+                res.write(`<h1>에러 발생</h1>`);
+                res.end();
+                return;
+            }
+
+            if(results) {
+                console.dir(results);
+                res.writeHead(200, {"Content-Type":"text/html;charset=utf8"});
+                res.write("<h3>사용자 리스트</h3>");
+                res.write("div><ul>");
+
+                for(var i=0; i<results.length; i++) {
+                    var curId = results[i]._doc.id;
+                    var curname = results[i]._doc.name;
+                    res.write(`    <li>#4${i} -> ${curId}, ${curName} </li>`);
+                }
+
+                res.write(`</ul></div>`);
+                res.end();
+            }else {
+                console.log(`조회 자료  없음`);
+                res.writeHead(200, {"Content-Type":"text/html;charset=utf8"});
+                res.write(`<h1>사용자 데이터 조회 되지 않음</h1>`);
+                res.end();
+            }
+        });
+    }else {
+        console.log(`error 발생`);
+        res.writeHead(200, {"Content-Type":"text/html;charset=utf8"});
+        res.write(`<h1>database 연결 안됨</h1>`);
+        res.end();
+        return;
+    }
+})
+
+
+
 var authUser = (db, id, password, callback) => {
     console.log(`addUser called : ${id}, ${password}`);
+
+    UserModel.findById(id, (err, results) => {
+        if(err) {
+            callback(err, null);
+            return;
+        }
+
+        console.log(`아이디 %s로 검색 됨`);
+        if(results.length > 0) { //1개라도 결과가 있을 때
+            if(results[0]._doc.password === password) {
+                console.log(`비밀번호 일치함`);
+                callback(null, results);
+            }else {
+                console.log(`비밀번호 일치하지 않음`);
+                callback(null, null);
+            }
+        }else {
+            console.log(`아이디 일치하는 사용자 없음`);
+            callback(null, null);
+        }
+    });
 
     UserModel.find({"id":id, "password":password}, (err, docs) => {
         if(err) {
@@ -188,7 +272,7 @@ var errorHandler = expressErrorHandler({
 app.use(expressErrorHandler.httpError(404));
 app.use(errorHandler);
 
-var server = http.createServer(app).listen(app.get(`prot`), () => {
+var server = http.createServer(app).listen(app.get(`port`), () => {
     console.log(`starts server with express : ${app.get(`port`)}`);
 
     connectDB();
