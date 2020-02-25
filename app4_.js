@@ -61,9 +61,8 @@ function connectDB() {
 
 var app = express();
 app.set(`port`, process.env.PORT || 3000);
-console.log(`port 번호 설정완료`);
 app.use(static(path.join(__dirname,'public'))); // app.use(`/public`,static(path.join(__dirname,'public'))); 
-console.log(`dir 설정 완료`);
+
 
 app.use(bodyParser.urlencoded({extended:false}));
 app.use(bodyParser.json());
