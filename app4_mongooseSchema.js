@@ -21,7 +21,7 @@ function connectDB() {
     var databaseUrl = `mongodb://localhost:27017/local`;
 
     mongoose.Promise = global.Promise; //몽구스에서 설정을 이렇게 하라고 정해 놓음
-    mongoose.connect(databaseUrl, {useNewUrlParser:true}); //몽고수 새로운 연결방식
+    mongoose.connect(databaseUrl, {useNewUrlParser:true}); //몽구스 새로운 연결방식
     database = mongoose.connection;
     database.on('open', () => { //open 이라는 이벤트가 발생하면 연걸
         console.log(`database connected by moogse : ${databaseUrl}`);
@@ -36,12 +36,12 @@ function connectDB() {
         });
         console.log(`UserSchema 정의완료`);
 
-        UserSchema.static('findById', (id, callback) => {
-            console.log(` 1 : ${this}`);
-            return UserModel.find({id:id}, callback); //this ri UserModel 을 참조하는 것일듯?
-        });
+        // UserSchema.static('findById', (id, callback) => {
+        //     console.log(` 1 : ${this}`);
+        //     return UserModel.find({id:id}, callback); //this ri UserModel 을 참조하는 것일듯?
+        // });
 
-        UserSchema.statics.findById = (id, callback) => { console.log(this); return UserModel.find({}, callback);} // 이렇게 하면 바로 위 함수랑 같음
+        UserSchema.statics.findById = (id, callback) => { console.log(this); return UserModel.find({}, callback);} // 이렇게 하면 바로 위 함수랑 같음(UserSchema.static FindById)
 
         UserSchema.static('findAll', (callback) => {
             console.log(` 3 : ${this}`);
@@ -209,7 +209,7 @@ router.route("/listuser").post((req, res) => {
 
 
 var authUser = (db, id, password, callback) => {
-    console.log(`addUser called : ${id}, ${password}`);
+    console.log(`authUser called : ${id}, ${password}`);
 
     UserModel.findById(id, (err, results) => {
         if(err) {
@@ -232,20 +232,20 @@ var authUser = (db, id, password, callback) => {
         }
     });
 
-    UserModel.find({"id":id, "password":password}, (err, docs) => {
-        if(err) {
-            callback(err, null);
-            return;
-        }
+    // UserModel.find({"id":id, "password":password}, (err, docs) => {
+    //     if(err) {
+    //         callback(err, null);
+    //         return;
+    //     }
 
-        if(docs.length > 0) {
-            console.log(`found the user`);
-            callback(null, docs);
-        }else {
-            console.log(`can not find the user`);
-            callback(null, null);
-        }
-    });
+    //     if(docs.length > 0) {
+    //         console.log(`found the user`);
+    //         callback(null, docs);
+    //     }else {
+    //         console.log(`can not find the user`);
+    //         callback(null, null);
+    //     }
+    // });
 };
 
 var addUser = (db, id, password, name, callback) => {
