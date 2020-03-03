@@ -41,20 +41,15 @@ function createUserSchema() {
         .virtual('info')
         .set(function (info) {
             var splitted = info.split(` `);
-            console.log("this");
-            console.log(this);
             this.id = splitted[0]; //this는 UserSchema
             this.name = splitted[1];
             console.log(`virtual info attribute set : ${this.id}, ${this.name}`);
         })
         .get(function()  {
-            console.log("get 실행");
             return this.id + ' ' + this.name});
 
     UserModel = mongoose.model("users4", UserSchema);
     console.log(`UserModel defined`);
-    console.log("get : " + UserSchema.virtual('info').get()); 
-    console.log(UserSchema.virtual('info').get());       
 }
 
 function doTest() {
