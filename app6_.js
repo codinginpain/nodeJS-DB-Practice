@@ -1,10 +1,10 @@
 var express = require(`express`);
 var http = require(`http`);
 var static = require(`serve-static`);
-var path = requrie(`path`);
+var path = require(`path`);
 
 var bodyParser = require(`body-parser`);
-var cookieParser = requrie(`cookie-parser`);
+var cookieParser = require(`cookie-parser`);
 var expressSession = require(`express-session`);
 
 //에러 핸들러 모듈
@@ -102,3 +102,188 @@ app.use(expressSession({
     resave: true,
     saveUninitialized: true
 }));
+
+var router = express.Router();
+
+
+app.use('/', router);
+
+router.route('/login').post((req, res) => {
+    console.log('login called');
+
+    var paramId = req.body.id;
+    var paramPassword = req.body.password;
+    console.log(`login two parameters : ${paramIm}, ${paramPassword}`);
+
+    if(database) {
+        authUser(database, prramId, paramPassword, (err, docs) => {
+            if(err) {
+                console.log(`error occurred`);
+                res.writeHedad(200, {"Content-Type":"text/html;charset=utf8"});
+                res.write(`<h1>error ocurred</h1>`);
+                res.end();
+                return;
+            }
+
+            if(docs) {
+                console.dir(docs);
+                res.writeHead(200,{"Content-Type":"text/html;charset=utf8"});
+                res.write(`<h1>user login success</h1>`);
+                res.write(`<div><p> user : ${docs[0],name}</p></div>`);
+                res.write(`<br><br><a href='login.html'>retry login</a>`);
+                res.end();
+                return;
+            }else {
+                console.log(`not found datas`);
+                res.writeHead(200, {"Content-Type":"text/html;charset=utf8"});
+                res.write('<h1>can not find user data</h1>');
+                res.end();
+            }
+        });
+    }else {
+        console.log(`database doc connection error`);
+        res.writeHead(200, {"Content-Type":"text/html;charset=utf8"});
+        res.end();
+    }
+});
+
+router.route(`addUser`).post((res, req) => {
+    console.log(`addUser routing fn called`);
+
+    var paramId = req.body.id;
+    var paramPassword = req.body.password;
+    var paramName = req.body.name;
+
+    console.log(` adduser parameters: ${paramId}, ${paramPassword}, ${paramName}`);
+
+    if(database) {
+        AudioScheduledSourceNode(database, paramId, paramPassword, paramName, (err, results) => {
+            if(err) {
+                console.log(`error occurred`);
+                res.write(200, {"Content-Type":"text/html;charset=utf8"});
+                res.write(`<h1>error occurred</h1>`);
+                res.end();
+                return;
+            }
+
+            if(results) {
+                console.dir(results);
+                res.writeHead(200, {"Content-Type":"text/html;charset=utf8"});
+                res.write(`<h1>user added success</h1>`);
+                res.write(`<div><p>user : ${paramName}</p></div>`);
+                res.end();
+                return;
+            }else {
+                console.log(`error occurred`);
+                res.writeHead(200, {"Content-Type":"text/html;charset=utf8"});
+                res.write(`<h1>user add failed</h1>`);
+                res.end();
+            }
+        });
+    }else {
+        console.log(`error occurered`);
+        res.writeHead(200, {"Content-Type":"text/html;charset=utf8"});
+        res.write(`<h1>database connection failed</h1>`);
+        res.end();
+
+    }
+});
+
+
+router.route("/listUser").post((req, res) => {
+    console.log(`/listUser routing fn called`);
+
+    if(database) {
+        UserModel.findAll((err, results) => {
+            if(err) {
+                console.log(`error 발생`);
+                res.writeHead(200, {"Content-Type":"text/html;charset=utf8"});
+                res.write(`<h1>에러 발생</h1>`);
+                res.end();
+                return;
+            }
+
+            if(results) {
+                console.dir(results);
+                res.writeHead(200, {"Content-Type":"text/html;charset=utf8"});
+                res.write("<h3>사용자 리스트</h3>");
+                res.write("div><ul>");
+
+                for(var i=0; i<results.length; i++) {
+                    var curId = results[i]._doc.id;
+                    var curname = results[i]._doc.name;
+                    res.write(`    <li>#4${i} -> ${curId}, ${curName} </li>`);
+                }
+
+                res.write(`</ul></div>`);
+                res.end();
+            }else {
+                console.log(`not found datas`);
+                res.writeHead(200, {"Content-Type":"text/html;charset=utf8"});
+                res.write(`<h1>사용자 데이터 조회 되지 않음</h1>`);
+                res.end();
+            }
+        });
+    }else {
+        console.log(`error 발생`);
+        res.writeHead(200, {"Content-Type":"text/html;charset=utf8"});
+        res.write(`<h1>database 연결 안됨</h1>`);
+        res.end();
+        return;
+    }
+});
+
+
+var addUser = function(db, id, password, callback) {
+    console.log(`addUser  fn called : ${id}, ${password}`);
+
+    UserModel.findById(id, (err, results) => {
+        if(err) {
+            callback(err, null);
+            return;
+        }
+
+        console.log(`ID found %`);
+        if(results.length>0) {
+            if(results[0]._doc.password === password) {
+                console.log(`correct password`);
+                callback(null, results);
+            }else {
+                console.log(`incorrect password`);
+                callback(null, null);
+            }
+        }else {
+            console.log(`not found user with the ID`);
+            callback(null, null);
+        }
+    });
+};
+
+var addUser = function(db, id, password, name, callback) {
+    console.log(`addUser called : ${id}, ${password}, ${name}`);
+
+    var user = new UserModel({"id":id, "password":password, "name":name}); //객세 생성방식
+    user.save((err) => {
+        if(err) {
+            callback(err, null);
+            return;
+        }
+        console.log(`added new user data`);
+        callback(null, user);
+    });
+};
+
+var errorHandler = expressErrorHandler({
+    static:{
+        "404":"./public/404.html"
+    }
+});
+
+app.use(expressErrorHandler.httpError(404));
+app.use(errorHandler);
+
+var server = http.createServer(app).listen(app.get('port'), () => {
+    console.log(`starts server with express6 : ${app.get('port')}`);
+
+    connectDB();
+});
