@@ -68,17 +68,17 @@ function connectDB() {
                 console.log('authenticate called');
                 return this.encryptPassword(plainText) === hashed_password;
             }
-        })
+        });
 
         UserSchema.statics.findById = function(id, callback) {
-            return UserModel.findById({}, callback);
+            return UserModel.find({}, callback);
         }
 
         UserSchema.static('findAll', (callback) => {
             return UserModel.find({}, callback);
         });
 
-        UserModel = mongoose.model(`users2`, UserSchema);
+        UserModel = mongoose.model(`users3`, UserSchema);
         console.log(`UserModel defined`);
     });
 
@@ -113,10 +113,10 @@ router.route('/login').post((req, res) => {
 
     var paramId = req.body.id;
     var paramPassword = req.body.password;
-    console.log(`login two parameters : ${paramIm}, ${paramPassword}`);
+    console.log(`login two parameters : ${paramId}, ${paramPassword}`);
 
     if(database) {
-        authUser(database, prramId, paramPassword, (err, docs) => {
+        authUser(database, paramId, paramPassword, (err, docs) => {
             if(err) {
                 console.log(`error occurred`);
                 res.writeHedad(200, {"Content-Type":"text/html;charset=utf8"});
@@ -129,7 +129,7 @@ router.route('/login').post((req, res) => {
                 console.dir(docs);
                 res.writeHead(200,{"Content-Type":"text/html;charset=utf8"});
                 res.write(`<h1>user login success</h1>`);
-                res.write(`<div><p> user : ${docs[0],name}</p></div>`);
+                res.write(`<div><p> user : ${docs[0].name}</p></div>`);
                 res.write(`<br><br><a href='login.html'>retry login</a>`);
                 res.end();
                 return;
@@ -147,7 +147,7 @@ router.route('/login').post((req, res) => {
     }
 });
 
-router.route(`addUser`).post((res, req) => {
+router.route(`/addUser`).post((req, res) => {
     console.log(`addUser routing fn called`);
 
     var paramId = req.body.id;
@@ -157,7 +157,7 @@ router.route(`addUser`).post((res, req) => {
     console.log(` adduser parameters: ${paramId}, ${paramPassword}, ${paramName}`);
 
     if(database) {
-        AudioScheduledSourceNode(database, paramId, paramPassword, paramName, (err, results) => {
+        addUser(database, paramId, paramPassword, paramName, (err, results) => {
             if(err) {
                 console.log(`error occurred`);
                 res.write(200, {"Content-Type":"text/html;charset=utf8"});
@@ -207,12 +207,12 @@ router.route("/listUser").post((req, res) => {
                 console.dir(results);
                 res.writeHead(200, {"Content-Type":"text/html;charset=utf8"});
                 res.write("<h3>사용자 리스트</h3>");
-                res.write("div><ul>");
+                res.write("<div><ul>");
 
                 for(var i=0; i<results.length; i++) {
                     var curId = results[i]._doc.id;
-                    var curname = results[i]._doc.name;
-                    res.write(`    <li>#4${i} -> ${curId}, ${curName} </li>`);
+                    var curName = results[i]._doc.name;
+                    res.write(`    <li>#4 ${i}번째 -> ${curId}, ${curName} </li>`);
                 }
 
                 res.write(`</ul></div>`);
@@ -234,8 +234,8 @@ router.route("/listUser").post((req, res) => {
 });
 
 
-var addUser = function(db, id, password, callback) {
-    console.log(`addUser  fn called : ${id}, ${password}`);
+var authUser = function(db, id, password, callback) {
+    console.log(`authUser fn called : ${id}, ${password}`);
 
     UserModel.findById(id, (err, results) => {
         if(err) {
@@ -245,7 +245,11 @@ var addUser = function(db, id, password, callback) {
 
         console.log(`ID found %`);
         if(results.length>0) {
-            if(results[0]._doc.password === password) {
+            var user = new UserModel({id:id});
+            var authenticated = user.authenticate(password, results[0]._doc.salt, results[0]._doc.hashed_password);
+
+
+            if(authenticated) {
                 console.log(`correct password`);
                 callback(null, results);
             }else {
