@@ -47,7 +47,8 @@ router.route('/adduser').post((req, res) => {
 
     console.log(`called parameters : ${paramId}, ${paramPassword}, ${paramName}, ${paramAge}`);
 
-    addUser(paramId, paramName, paramAge, paramPassword, (err, addedUser) => {
+    var age = Number(paramAge);
+    addUser(paramId, paramName, age, paramPassword, (err, addedUser) => {
         if(err) {
             console.log(`error occurred`);
             res.writeHead(200, {"Content-Type:":"text/html;charset=utf8"});
