@@ -71,6 +71,40 @@ router.route('/adduser').post((req, res) => {
     });
 })
 
+router.route('/login').post((req, res) => {
+    console.log(`/login routing fn called`);
+
+    var paramId = req.body.id;
+    var paramPassword = req.body.password;
+
+    authUser(paramId, paramPassword, function(err, rows) {
+        if(err) {
+            console.log(`error occurred`);
+            res.writeHead(200, {"Content-Type":"text/html;charset=utf8"});
+            res.write(`<h1>error occurred</h1>`);
+            res.end();
+            return;
+        }
+
+        if(rows) {
+            console.dir(rows);
+
+            res.writeHead(200, {"Content-Type":"text/html;charset=utf8"});
+            res.write(`<h1>user login success</h1>`);
+            res.write(`<div><p>user : ${rows[0].name}</p></div>`);
+            console.log("찍느중");
+            res.write(`<br><br><a href='login.html'>relogin</a>`);
+            console.log("찍은 후");
+            res.end();
+        }else {
+            console.log(`error occurred.`);
+            res.write(200, {"Content-Type":"text/html;charset=utf8"});
+            res.write(`<h1>user data not found</h1>`);
+            res.end();
+        }
+    }); 
+});
+
 
 
 var addUser = function(id, name, age, password, callback) {
@@ -101,6 +135,45 @@ var addUser = function(id, name, age, password, callback) {
         });
     });
 };
+
+
+var authUser = function(id, password, callback) {
+    console.log(`authUser called : ${id}, ${password}`);
+
+    pool.getConnection((err, conn) => {
+        if(err) {
+            if(conn) {
+                conn.release();
+            }
+            callback(err, null);
+            return;
+        }
+        console.log(`database connected thread id : ${conn.threadId}`);
+        
+        var tablename = "users";
+        var colums = ['id', 'name', 'age'];
+        var exec = conn.query("select ?? from ?? where id = ? and password = ?", [colums, tablename, id, password], (err, rows) => {
+            conn.release();
+            console.log(`excuted sql : ${exec.sql}`);;
+
+            if(err) {
+                callback(err,null);
+                return;
+            }
+
+            if(rows.length > 0) {
+                console.log(`find user`);
+                callback(null, rows);
+            }else {
+                console.log(`not found user`);
+                callback(null, null);
+            }
+
+        });
+
+
+    });
+}
 
 
 var server = http.createServer(app).listen(app.get('port'), function() {
