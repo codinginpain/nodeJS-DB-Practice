@@ -92,9 +92,7 @@ router.route('/login').post((req, res) => {
             res.writeHead(200, {"Content-Type":"text/html;charset=utf8"});
             res.write(`<h1>user login success</h1>`);
             res.write(`<div><p>user : ${rows[0].name}</p></div>`);
-            console.log("찍느중");
             res.write(`<br><br><a href='login.html'>relogin</a>`);
-            console.log("찍은 후");
             res.end();
         }else {
             console.log(`error occurred.`);
